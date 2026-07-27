@@ -1,49 +1,20 @@
-import { useState } from 'react';
-import { Link, IconButton, Text } from '@capra/core';
-import { CopyOutlined, CheckOutlined } from '@capra/icons';
-import { EmptySuitcase } from '@capra/icons/images';
+import { Routes, Route, BrowserRouter } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import PairView from './pages/PairView';
+import AgentView from './pages/AgentView';
+import ProviderView from './pages/ProviderView';
+import GatewayView from './pages/GatewayView';
 
-const PURPOSE = "Cribl App to demonstrate data sources for AI agents and providers with sample data and data tiering suggestions.";
-
-function App() {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(PURPOSE).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
+export default function App() {
   return (
-    <div className="landing-page">
-      <div className="landing-content">
-        <div className="illustration">
-          <EmptySuitcase size="lg" />
-        </div>
-        <div className="landing-info">
-          <Text as="h1" variant="heading">
-            <span className="text-green">Your app is running.</span> Now let's build your idea.
-          </Text>
-          {PURPOSE && (
-            <>
-              <Text>Copy and paste your prompt into your IDE tool.</Text>
-              <div className="snippet-box">
-                <Text as="pre" variant="code">{PURPOSE}</Text>
-                <IconButton
-                  onPress={handleCopy}
-                  aria-label="Copy to clipboard"
-                  icon={copied ? CheckOutlined : CopyOutlined}
-                />
-              </div>
-            </>
-          )}
-          <Link href="https://docs.cribl.io/apps" isExternal>
-            Learn more
-          </Link>
-        </div>
-      </div>
-    </div>
+    <BrowserRouter basename={window.CRIBL_BASE_PATH}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/pair/:id" element={<PairView />} />
+        <Route path="/agent/:id" element={<AgentView />} />
+        <Route path="/provider/:id" element={<ProviderView />} />
+        <Route path="/gateway/:id" element={<GatewayView />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;

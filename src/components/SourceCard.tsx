@@ -94,6 +94,7 @@ export function SourceCard({ source, onExpand }: SourceCardProps) {
           )}
         </Card.Content>
       </Card>
+      </div>
       {!isControlled && (
         <EventModal source={internalOpen ? source : null} onClose={() => setInternalOpen(false)} />
       )}
