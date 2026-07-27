@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Text, Pill } from '@capra/core';
 import { token } from '@capra/theme';
@@ -79,7 +80,9 @@ function PairCard({ pair }: { pair: Pair }) {
 }
 
 function AgentCard({ agent }: { agent: Agent }) {
+  const [showChecklist, setShowChecklist] = useState(false);
   const isComingSoon = agent.status === 'coming-soon';
+
   const card = (
     <Card>
       <Card.Header>
@@ -95,21 +98,43 @@ function AgentCard({ agent }: { agent: Agent }) {
       <Card.Content>
         <div style={cardBodyStyle}>
           <div style={cardDescriptionStyle}>
-            <Text color="subtle">{agent.description}</Text>
+            <Text>{agent.description}</Text>
           </div>
+          {isComingSoon && agent.promotionChecklist && (
+            <div>
+              <Text
+                as="button"
+                variant="body-sm-normal"
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowChecklist(!showChecklist);
+                }}
+              >
+                {showChecklist ? '▼ Hide' : '▶ Show'} promotion checklist
+              </Text>
+              {showChecklist && (
+                <ol style={{ marginTop: token('spacing.sm'), paddingLeft: token('spacing.lg'), fontSize: '0.8rem', color: token('color.foreground.subtle') }}>
+                  {agent.promotionChecklist.map((item, i) => (
+                    <li key={i} style={{ marginBottom: '0.25rem' }}>{item}</li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
         </div>
       </Card.Content>
     </Card>
   );
 
   if (isComingSoon) {
-    // Dimmed, non-navigable card for coming-soon agents.
+    // Dimmed, non-navigable card for coming-soon agents. But allow interaction
+    // with the promotion checklist toggle.
     return (
       <div
         style={{
-          opacity: '0.5',
-          pointerEvents: 'none',
-          cursor: 'not-allowed',
+          opacity: '0.7',
+          cursor: 'default',
           height: '100%',
         }}
       >
