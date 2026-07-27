@@ -1,0 +1,65 @@
+.tiering-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: token('border.default');
+  border-radius: token('radius.md');
+  overflow: hidden;
+  background-color: token('color.background.neutral.default');
+}
+
+.tiering-row {
+  display: grid;
+  /* 1 source column + 4 tier columns, tier columns share width evenly */
+  grid-template-columns: minmax(180px, 1.2fr) repeat(4, minmax(0, 1fr));
+  border-bottom: token('border.default');
+}
+
+.tiering-row:last-child {
+  border-bottom: none;
+}
+
+.tiering-row-header {
+  background-color: token('color.background.neutral.subtle');
+}
+
+.tiering-cell {
+  padding: token('spacing.md');
+  display: flex;
+  flex-direction: column;
+  gap: token('spacing.xs');
+  border-right: token('border.default');
+}
+
+.tiering-cell:last-child {
+  border-right: none;
+}
+
+.tiering-cell-corner {
+  align-self: center;
+  justify-content: center;
+}
+
+.tiering-cell-tier {
+  align-items: flex-start;
+}
+
+.tiering-cell-source {
+  background-color: token('color.background.neutral.subtle');
+  justify-content: center;
+}
+
+.tiering-cell-data {
+  align-items: flex-start;
+}
+
+.tiering-cell-empty {
+  align-items: center;
+  justify-content: center;
+}
+
+.tiering-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: token('spacing.xs');
+}
