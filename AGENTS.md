@@ -1,3 +1,37 @@
+# AI Data Sources — Cribl App
+
+## What This App Is
+
+A reference catalog of observability data sources for AI agents, providers, and gateways. Educational, not operational — documents what data exists, where it lives, how Cribl collects it, and how to tier it. No pipeline configs, no verification queries.
+
+## Key Docs
+
+- **PRD.md** — Full product spec (user stories, content inventory, view types, tiering model, out-of-scope)
+- **CONTEXT.md** — Domain glossary, resolved decisions, V1 content inventory, Claude Desktop promotion checklist
+- **docs/adr/0001-cribl-native-tiering-model.md** — ADR for the 4-tier Cribl-native model (no SIEM)
+- **research/** — All research docs (agents, providers, gateways, OTel, Cursor hooks)
+
+## Hard Constraints
+
+- **Capra design system only** — use `@capra/core`, `@capra/icons`, `token()` for design tokens. No dark mode.
+- **Interactive SVG diagrams** — same pattern as `claude-bedrock` app, re-skinned to Capra. Click components → modal with example events.
+- **4-tier model** — Lakehouse Engine (Investigate), Metrics Store (Monitor), Cribl Lake (Prove), Archive (Keep). No SIEM tier.
+- **Edge for agents only** — Cribl Edge appears in agent views and pair views (agent side). Providers and gateways go straight to Cribl Stream.
+- **No config recipes or verification queries** — reference level only.
+- **Tiering suggestions travel with sources** — identical everywhere a source appears. Pair views can add tip notes.
+
+## Module Layout
+
+```
+src/
+├── pages/          # Landing, PairView, AgentView, ProviderView, GatewayView
+├── components/     # ArchitectureDiagram, SourceCard, TieringTable, EventModal
+├── data/           # Source catalogs per agent/provider/gateway, tiering definitions
+└── types/          # Shared types (Source, Tier, Agent, Provider, Gateway, Pair)
+```
+
+---
+
 # Cribl App Platform Developer Guide
 
 ## Versioning
