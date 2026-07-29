@@ -191,6 +191,73 @@ describe('Diagram Layout', () => {
     });
   });
 
+  describe('computeLayout — viewBox', () => {
+    it('encloses all node bounds with padding', () => {
+      const config: DiagramConfig = {
+        viewType: 'pair',
+        nodes: [
+          node('a', 100, 100, 100, 50),
+          node('b', 500, 400, 100, 50),
+        ],
+        edges: [],
+        layers: [],
+      };
+
+      const { viewBox } = computeLayout(config);
+      // Node bounds: x [50, 550], y [75, 425]. viewBox must contain these.
+      expect(viewBox.x).toBeLessThanOrEqual(50);
+      expect(viewBox.y).toBeLessThanOrEqual(75);
+      expect(viewBox.x + viewBox.width).toBeGreaterThanOrEqual(550);
+      expect(viewBox.y + viewBox.height).toBeGreaterThanOrEqual(425);
+    });
+
+    it('encloses content that would fall outside a fixed 900x680 box', () => {
+      const config: DiagramConfig = {
+        viewType: 'pair',
+        // Tier row wider than 900 — first tier sits at negative x.
+        nodes: [
+          node('t1', -30, 600, 150, 40),
+          node('t4', 990, 600, 150, 40),
+        ],
+        edges: [],
+        layers: [],
+      };
+
+      const { viewBox } = computeLayout(config);
+      expect(viewBox.x).toBeLessThanOrEqual(-105); // left edge of first tier
+      expect(viewBox.x + viewBox.width).toBeGreaterThanOrEqual(1065);
+    });
+
+    it('extends upward to cover return-edge curves', () => {
+      const config: DiagramConfig = {
+        viewType: 'pair',
+        nodes: [
+          node('a', 100, 100, 100, 50),
+          node('b', 300, 100, 100, 50),
+        ],
+        edges: [{ id: 'r', from: 'a', to: 'b', type: 'return' }],
+        layers: [],
+      };
+
+      const { viewBox } = computeLayout(config);
+      // Curve peaks at y = 100 - 80 = 20, so top must be at or above it.
+      expect(viewBox.y).toBeLessThanOrEqual(20);
+    });
+
+    it('falls back to a small box for empty diagrams', () => {
+      const config: DiagramConfig = {
+        viewType: 'pair',
+        nodes: [],
+        edges: [],
+        layers: [],
+      };
+
+      const { viewBox } = computeLayout(config);
+      expect(viewBox.width).toBeGreaterThan(0);
+      expect(viewBox.height).toBeGreaterThan(0);
+    });
+  });
+
   describe('computeLayout — layers', () => {
     it('preserves layer positions', () => {
       const config: DiagramConfig = {

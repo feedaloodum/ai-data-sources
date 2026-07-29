@@ -7,6 +7,7 @@ import { buildProviderConfig, buildSourcesMap } from '../components/diagramBuild
 import { ArchitectureDiagram } from '../components/ArchitectureDiagram';
 import { SourceCard } from '../components/SourceCard';
 import { TieringTable } from '../components/TieringTable';
+import { EntityHeading } from '../components/entityLogos';
 
 const pageStyle: CSSProperties = {
   padding: `${token('spacing.xl')} ${token('spacing.lg')}`,
@@ -79,7 +80,7 @@ export default function ProviderView() {
   return (
     <div style={pageStyle}>
       <section style={sectionStyle}>
-        <Text as="h1" variant="heading-xl">{provider.name}</Text>
+        <EntityHeading id={provider.id} kind="provider" title={provider.name} />
         <Text color="subtle">{provider.description}</Text>
       </section>
 

@@ -1,6 +1,8 @@
 // ── DiagramConfig Builders ──────────────────────────────────────────────────
 // Helper functions that construct node/edge/layer arrays for each view type.
-// Layouts use the ArchitectureDiagram's viewBox of 900x680.
+// The diagram's viewBox is auto-fit to content (see computeViewBox), and layer
+// bands are sized to their member nodes (see computeLayers), so coordinates
+// here only need to be internally consistent — not bounded to a fixed canvas.
 
 import type {
   DiagramConfig,
@@ -11,29 +13,48 @@ import type {
 import type { Agent, Provider, Gateway, Source } from '../types';
 import { TIERS, TIER_ORDER } from '../data/tiering';
 
-// ── Coordinate constants (viewBox 900x680) ─────────────────────────────────
+// ── Layer ids ───────────────────────────────────────────────────────────────
 
-const VIEW_W = 900;
+const L_TOPOLOGY = 'topology';
+const L_SOURCES = 'sources';
+const L_COLLECTION = 'collection';
+const L_DESTINATIONS = 'destinations';
 
-const AGENT_X = 110;
-const PROVIDER_X = 790;
-const GENERIC_LEFT_X = 110;
-const GENERIC_RIGHT_X = 790;
-const GATEWAY_CENTER_X = 450;
+// ── Coordinate constants ────────────────────────────────────────────────────
 
-const NODE_W = 150;
-const NODE_H = 56;
-const SOURCE_W = 130;
-const SOURCE_H = 40;
-const TIER_W = 150;
-const TIER_H = 40;
-const TIER_Y = 600;
-const TIER_SPACING = 170;
+const AGENT_X = 130;
+const PROVIDER_X = 830;
+const GENERIC_LEFT_X = 130;
+const GENERIC_RIGHT_X = 830;
+const CENTER_X = 480;
+const EDGE_X = 330;
+const STREAM_X = 630;
 
-const EDGE_Y = 70;
-const SOURCE_Y = 180;
-const MID_Y = 320;
-const STREAM_Y = 420;
+// Boxes are wider/taller than before so labels can wrap to two lines.
+const NODE_W = 172;
+const NODE_H = 60;
+const SOURCE_W = 190;
+const SOURCE_H = 54;
+const CRIBL_W = 168;
+const CRIBL_H = 60;
+const TIER_W = 184;
+const TIER_H = 56;
+const TIER_SPACING = 206;
+
+// Vertical rhythm. Downstream rows are placed relative to the tallest source
+// column so bands never overlap regardless of source count.
+const TOP_Y = 70;
+const SOURCE_START_Y = 200;
+const SOURCE_SPACING = 68;
+const ROW_GAP = 132;
+
+/** Y centers for the collection + destination rows given the tallest column. */
+function rowYs(maxSourceCount: number): { collectionY: number; tierY: number } {
+  const lastSourceY = SOURCE_START_Y + Math.max(0, maxSourceCount - 1) * SOURCE_SPACING;
+  const collectionY = lastSourceY + ROW_GAP;
+  const tierY = collectionY + ROW_GAP;
+  return { collectionY, tierY };
+}
 
 // ── Shared node builders ─────────────────────────────────────────────────────
 
@@ -42,11 +63,13 @@ function agentNode(agent: Agent, x: number = AGENT_X): DiagramNode {
     id: `agent-${agent.id}`,
     label: agent.name,
     x,
-    y: EDGE_Y,
+    y: TOP_Y,
     width: NODE_W,
     height: NODE_H,
     type: 'agent',
     clickable: true,
+    brandId: agent.id,
+    layerId: L_TOPOLOGY,
   };
 }
 
@@ -55,11 +78,13 @@ function providerNode(provider: Provider, x: number = PROVIDER_X): DiagramNode {
     id: `provider-${provider.id}`,
     label: provider.name,
     x,
-    y: EDGE_Y,
+    y: TOP_Y,
     width: NODE_W,
     height: NODE_H,
     type: 'provider',
     clickable: true,
+    brandId: provider.id,
+    layerId: L_TOPOLOGY,
   };
 }
 
@@ -67,29 +92,28 @@ function gatewayNode(gateway: Gateway): DiagramNode {
   return {
     id: `gateway-${gateway.id}`,
     label: gateway.name,
-    x: GATEWAY_CENTER_X,
-    y: EDGE_Y,
+    x: CENTER_X,
+    y: TOP_Y,
     width: NODE_W,
     height: NODE_H,
     type: 'gateway',
     clickable: true,
+    brandId: gateway.id,
+    layerId: L_TOPOLOGY,
   };
 }
 
-function genericNode(
-  id: string,
-  label: string,
-  x: number,
-): DiagramNode {
+function genericNode(id: string, label: string, x: number): DiagramNode {
   return {
     id,
     label,
     x,
-    y: EDGE_Y,
+    y: TOP_Y,
     width: NODE_W,
     height: NODE_H,
     type: 'generic',
     clickable: false,
+    layerId: L_TOPOLOGY,
   };
 }
 
@@ -103,6 +127,7 @@ function sourceNode(source: Source, x: number, y: number): DiagramNode {
     height: SOURCE_H,
     type: 'source',
     clickable: true,
+    layerId: L_SOURCES,
   };
 }
 
@@ -112,10 +137,12 @@ function edgeNode(id: string, label: string, x: number, y: number): DiagramNode 
     label,
     x,
     y,
-    width: SOURCE_W,
-    height: SOURCE_H,
+    width: CRIBL_W,
+    height: CRIBL_H,
     type: 'edge',
     clickable: false,
+    icon: 'edge',
+    layerId: L_COLLECTION,
   };
 }
 
@@ -125,26 +152,37 @@ function streamNode(id: string, label: string, x: number, y: number): DiagramNod
     label,
     x,
     y,
-    width: SOURCE_W,
-    height: SOURCE_H,
+    width: CRIBL_W,
+    height: CRIBL_H,
     type: 'stream',
     clickable: false,
+    icon: 'stream',
+    layerId: L_COLLECTION,
   };
 }
 
-function tierNodes(): DiagramNode[] {
-  const startX = (VIEW_W - (TIER_W * 4 + TIER_SPACING * 3)) / 2 + TIER_W / 2;
+const TIER_ICON = {
+  'lakehouse-engine': 'lakehouse',
+  'metrics-store': 'metrics',
+  'cribl-lake': 'lake',
+  archive: 'archive',
+} as const;
+
+function tierNodes(tierY: number): DiagramNode[] {
+  const startX = CENTER_X - (TIER_SPACING * (TIER_ORDER.length - 1)) / 2;
   return TIER_ORDER.map((tierId, i) => {
     const tier = TIERS[tierId];
     return {
       id: `tier-${tierId}`,
       label: tier.name,
       x: startX + i * TIER_SPACING,
-      y: TIER_Y,
+      y: tierY,
       width: TIER_W,
       height: TIER_H,
       type: 'tier' as const,
       clickable: false,
+      icon: TIER_ICON[tierId],
+      layerId: L_DESTINATIONS,
     };
   });
 }
@@ -158,57 +196,23 @@ function tierEdges(upstreamNodeId: string): DiagramEdge[] {
   }));
 }
 
-// ── Layer backgrounds ─────────────────────────────────────────────────────
+// ── Layer backgrounds (geometry computed from member nodes) ──────────────────
 
-function topLayer(): DiagramLayer {
-  return {
-    id: 'topology-layer',
-    label: 'Topology',
-    x: 20,
-    y: 30,
-    width: VIEW_W - 40,
-    height: 220,
-  };
+function labelLayer(id: string, label: string): DiagramLayer {
+  return { id, label };
 }
 
-function collectionLayer(): DiagramLayer {
-  return {
-    id: 'collection-layer',
-    label: 'Cribl Collection',
-    x: 20,
-    y: 270,
-    width: VIEW_W - 40,
-    height: 180,
-  };
-}
+// ── Source positioning helper ───────────────────────────────────────────────
 
-function tierLayer(): DiagramLayer {
-  return {
-    id: 'tier-layer',
-    label: 'Destinations',
-    x: 20,
-    y: 560,
-    width: VIEW_W - 40,
-    height: 100,
-  };
-}
-
-// ── Source positioning helpers ─────────────────────────────────────────────
-
-/**
- * Lay out a list of sources in a vertical column at the given x coordinate.
- * Returns positioned nodes plus an array of source ids (in order).
- */
+/** Lay sources in a vertical column at x. Returns positioned nodes + ids. */
 function sourceColumn(
   sources: Source[],
   x: number,
-  startY: number = SOURCE_Y,
-  spacing: number = 50,
 ): { nodes: DiagramNode[]; ids: string[] } {
   const nodes: DiagramNode[] = [];
   const ids: string[] = [];
   sources.forEach((source, i) => {
-    nodes.push(sourceNode(source, x, startY + i * spacing));
+    nodes.push(sourceNode(source, x, SOURCE_START_Y + i * SOURCE_SPACING));
     ids.push(source.id);
   });
   return { nodes, ids };
@@ -216,19 +220,18 @@ function sourceColumn(
 
 // ── Pair View Config ───────────────────────────────────────────────────────
 
-export function buildPairConfig(
-  agent: Agent,
-  provider: Provider,
-): DiagramConfig {
+export function buildPairConfig(agent: Agent, provider: Provider): DiagramConfig {
   const nodes: DiagramNode[] = [];
   const edges: DiagramEdge[] = [];
 
-  // Agent (left) + Provider (right)
+  const { collectionY, tierY } = rowYs(
+    Math.max(agent.sources.length, provider.sources.length),
+  );
+
   const aNode = agentNode(agent);
   const pNode = providerNode(provider);
   nodes.push(aNode, pNode);
 
-  // API call between agent and provider
   edges.push({
     id: `${aNode.id}-${pNode.id}`,
     from: aNode.id,
@@ -237,41 +240,24 @@ export function buildPairConfig(
     label: 'API',
   });
 
-  // Agent sources (left column, below agent)
-  const agentSourcesCol = sourceColumn(agent.sources, AGENT_X, SOURCE_Y);
+  const agentSourcesCol = sourceColumn(agent.sources, AGENT_X);
   nodes.push(...agentSourcesCol.nodes);
 
-  // Provider sources (right column, below provider)
-  const providerSourcesCol = sourceColumn(provider.sources, PROVIDER_X, SOURCE_Y);
+  const providerSourcesCol = sourceColumn(provider.sources, PROVIDER_X);
   nodes.push(...providerSourcesCol.nodes);
 
-  // Cribl Edge (middle-left) — only for agents
-  const edgeNode_ = edgeNode('cribl-edge', 'Cribl Edge', 300, MID_Y);
+  const edgeNode_ = edgeNode('cribl-edge', 'Cribl Edge', EDGE_X, collectionY);
   nodes.push(edgeNode_);
 
-  // Cribl Stream (middle-right)
-  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', 600, MID_Y);
+  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', STREAM_X, collectionY);
   nodes.push(streamNode_);
 
-  // Agent sources → Cribl Edge
   for (const sid of agentSourcesCol.ids) {
-    edges.push({
-      id: `${sid}-edge`,
-      from: sid,
-      to: edgeNode_.id,
-      type: 'data-flow',
-    });
+    edges.push({ id: `${sid}-edge`, from: sid, to: edgeNode_.id, type: 'data-flow' });
   }
-  // Provider sources → Cribl Stream
   for (const sid of providerSourcesCol.ids) {
-    edges.push({
-      id: `${sid}-stream`,
-      from: sid,
-      to: streamNode_.id,
-      type: 'data-flow',
-    });
+    edges.push({ id: `${sid}-stream`, from: sid, to: streamNode_.id, type: 'data-flow' });
   }
-  // Cribl Edge → Cribl Stream
   edges.push({
     id: `${edgeNode_.id}-${streamNode_.id}`,
     from: edgeNode_.id,
@@ -279,11 +265,15 @@ export function buildPairConfig(
     type: 'data-flow',
   });
 
-  // Tier nodes (bottom row) — fed from Cribl Stream
-  nodes.push(...tierNodes());
+  nodes.push(...tierNodes(tierY));
   edges.push(...tierEdges(streamNode_.id));
 
-  const layers: DiagramLayer[] = [topLayer(), collectionLayer(), tierLayer()];
+  const layers: DiagramLayer[] = [
+    labelLayer(L_TOPOLOGY, 'Topology'),
+    labelLayer(L_SOURCES, 'Data Sources'),
+    labelLayer(L_COLLECTION, 'Cribl Collection'),
+    labelLayer(L_DESTINATIONS, 'Destinations'),
+  ];
 
   return { viewType: 'pair', nodes, edges, layers };
 }
@@ -293,6 +283,8 @@ export function buildPairConfig(
 export function buildAgentConfig(agent: Agent): DiagramConfig {
   const nodes: DiagramNode[] = [];
   const edges: DiagramEdge[] = [];
+
+  const { collectionY, tierY } = rowYs(agent.sources.length);
 
   const aNode = agentNode(agent);
   const genericProvider = genericNode('generic-provider', 'AI Provider', GENERIC_RIGHT_X);
@@ -306,28 +298,18 @@ export function buildAgentConfig(agent: Agent): DiagramConfig {
     label: 'API',
   });
 
-  // Agent sources (left column, below agent)
-  const agentSourcesCol = sourceColumn(agent.sources, AGENT_X, SOURCE_Y);
+  const agentSourcesCol = sourceColumn(agent.sources, AGENT_X);
   nodes.push(...agentSourcesCol.nodes);
 
-  // Cribl Edge (middle-left) — only for agents
-  const edgeNode_ = edgeNode('cribl-edge', 'Cribl Edge', 300, MID_Y);
+  const edgeNode_ = edgeNode('cribl-edge', 'Cribl Edge', EDGE_X, collectionY);
   nodes.push(edgeNode_);
 
-  // Cribl Stream (middle-right)
-  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', 600, MID_Y);
+  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', STREAM_X, collectionY);
   nodes.push(streamNode_);
 
-  // Agent sources → Cribl Edge
   for (const sid of agentSourcesCol.ids) {
-    edges.push({
-      id: `${sid}-edge`,
-      from: sid,
-      to: edgeNode_.id,
-      type: 'data-flow',
-    });
+    edges.push({ id: `${sid}-edge`, from: sid, to: edgeNode_.id, type: 'data-flow' });
   }
-  // Cribl Edge → Cribl Stream
   edges.push({
     id: `${edgeNode_.id}-${streamNode_.id}`,
     from: edgeNode_.id,
@@ -335,11 +317,15 @@ export function buildAgentConfig(agent: Agent): DiagramConfig {
     type: 'data-flow',
   });
 
-  // Tier nodes fed from Cribl Stream
-  nodes.push(...tierNodes());
+  nodes.push(...tierNodes(tierY));
   edges.push(...tierEdges(streamNode_.id));
 
-  const layers: DiagramLayer[] = [topLayer(), collectionLayer(), tierLayer()];
+  const layers: DiagramLayer[] = [
+    labelLayer(L_TOPOLOGY, 'Topology'),
+    labelLayer(L_SOURCES, 'Data Sources'),
+    labelLayer(L_COLLECTION, 'Cribl Collection'),
+    labelLayer(L_DESTINATIONS, 'Destinations'),
+  ];
 
   return { viewType: 'agent', nodes, edges, layers };
 }
@@ -349,6 +335,8 @@ export function buildAgentConfig(agent: Agent): DiagramConfig {
 export function buildProviderConfig(provider: Provider): DiagramConfig {
   const nodes: DiagramNode[] = [];
   const edges: DiagramEdge[] = [];
+
+  const { collectionY, tierY } = rowYs(provider.sources.length);
 
   const genericAgent = genericNode('generic-agent', 'AI Agent', GENERIC_LEFT_X);
   const pNode = providerNode(provider);
@@ -362,29 +350,26 @@ export function buildProviderConfig(provider: Provider): DiagramConfig {
     label: 'API',
   });
 
-  // Provider sources (right column, below provider)
-  const providerSourcesCol = sourceColumn(provider.sources, PROVIDER_X, SOURCE_Y);
+  const providerSourcesCol = sourceColumn(provider.sources, PROVIDER_X);
   nodes.push(...providerSourcesCol.nodes);
 
-  // NO Cribl Edge node for providers — straight to Cribl Stream
-  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', 450, MID_Y);
+  // No Cribl Edge for providers — straight to Cribl Stream (centered).
+  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', CENTER_X, collectionY);
   nodes.push(streamNode_);
 
-  // Provider sources → Cribl Stream
   for (const sid of providerSourcesCol.ids) {
-    edges.push({
-      id: `${sid}-stream`,
-      from: sid,
-      to: streamNode_.id,
-      type: 'data-flow',
-    });
+    edges.push({ id: `${sid}-stream`, from: sid, to: streamNode_.id, type: 'data-flow' });
   }
 
-  // Tier nodes fed from Cribl Stream
-  nodes.push(...tierNodes());
+  nodes.push(...tierNodes(tierY));
   edges.push(...tierEdges(streamNode_.id));
 
-  const layers: DiagramLayer[] = [topLayer(), collectionLayer(), tierLayer()];
+  const layers: DiagramLayer[] = [
+    labelLayer(L_TOPOLOGY, 'Topology'),
+    labelLayer(L_SOURCES, 'Data Sources'),
+    labelLayer(L_COLLECTION, 'Cribl Collection'),
+    labelLayer(L_DESTINATIONS, 'Destinations'),
+  ];
 
   return { viewType: 'provider', nodes, edges, layers };
 }
@@ -395,12 +380,13 @@ export function buildGatewayConfig(gateway: Gateway): DiagramConfig {
   const nodes: DiagramNode[] = [];
   const edges: DiagramEdge[] = [];
 
+  const { collectionY, tierY } = rowYs(gateway.sources.length);
+
   const genericAgent = genericNode('generic-agent', 'AI Agent', GENERIC_LEFT_X);
   const gNode = gatewayNode(gateway);
   const genericProvider = genericNode('generic-provider', 'AI Provider', GENERIC_RIGHT_X);
   nodes.push(genericAgent, gNode, genericProvider);
 
-  // Agent → Gateway → Provider
   edges.push({
     id: `${genericAgent.id}-${gNode.id}`,
     from: genericAgent.id,
@@ -416,29 +402,25 @@ export function buildGatewayConfig(gateway: Gateway): DiagramConfig {
     label: 'API',
   });
 
-  // Gateway sources (center column, below gateway)
-  const gatewaySourcesCol = sourceColumn(gateway.sources, GATEWAY_CENTER_X, SOURCE_Y);
+  const gatewaySourcesCol = sourceColumn(gateway.sources, CENTER_X);
   nodes.push(...gatewaySourcesCol.nodes);
 
-  // NO Cribl Edge node for gateways — straight to Cribl Stream
-  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', 450, STREAM_Y);
+  const streamNode_ = streamNode('cribl-stream', 'Cribl Stream', CENTER_X, collectionY);
   nodes.push(streamNode_);
 
-  // Gateway sources → Cribl Stream
   for (const sid of gatewaySourcesCol.ids) {
-    edges.push({
-      id: `${sid}-stream`,
-      from: sid,
-      to: streamNode_.id,
-      type: 'data-flow',
-    });
+    edges.push({ id: `${sid}-stream`, from: sid, to: streamNode_.id, type: 'data-flow' });
   }
 
-  // Tier nodes fed from Cribl Stream
-  nodes.push(...tierNodes());
+  nodes.push(...tierNodes(tierY));
   edges.push(...tierEdges(streamNode_.id));
 
-  const layers: DiagramLayer[] = [topLayer(), collectionLayer(), tierLayer()];
+  const layers: DiagramLayer[] = [
+    labelLayer(L_TOPOLOGY, 'Topology'),
+    labelLayer(L_SOURCES, 'Data Sources'),
+    labelLayer(L_COLLECTION, 'Cribl Collection'),
+    labelLayer(L_DESTINATIONS, 'Destinations'),
+  ];
 
   return { viewType: 'gateway', nodes, edges, layers };
 }

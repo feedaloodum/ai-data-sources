@@ -7,6 +7,7 @@ import { buildPairConfig, buildSourcesMap } from '../components/diagramBuilders'
 import { ArchitectureDiagram } from '../components/ArchitectureDiagram';
 import { SourceCard } from '../components/SourceCard';
 import { TieringTable } from '../components/TieringTable';
+import { PairHeading } from '../components/entityLogos';
 
 const pageStyle: CSSProperties = {
   padding: `${token('spacing.xl')} ${token('spacing.lg')}`,
@@ -81,7 +82,7 @@ export default function PairView() {
   return (
     <div style={pageStyle}>
       <div style={sectionStyle}>
-        <Text as="h1" variant="heading-xl">{pairTitle}</Text>
+        <PairHeading agentId={agent.id} providerId={provider.id} title={pairTitle} />
         <Text color="subtle">Agent + Provider pair with combined tiering tips.</Text>
       </div>
 

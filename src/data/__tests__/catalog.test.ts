@@ -14,9 +14,9 @@ import {
 
 describe('Catalog Index', () => {
   describe('listAllAgents', () => {
-    it('returns 5 agents (4 V1 + 1 coming-soon)', () => {
+    it('returns 4 V1 agents', () => {
       const agents = listAllAgents();
-      expect(agents).toHaveLength(5);
+      expect(agents).toHaveLength(4);
     });
 
     it('includes Claude Code, Codex CLI, Cursor, ChatGPT Desktop as V1 agents', () => {
@@ -26,13 +26,6 @@ describe('Catalog Index', () => {
       expect(ids).toContain('codex-cli');
       expect(ids).toContain('cursor');
       expect(ids).toContain('chatgpt-desktop');
-    });
-
-    it('includes Claude Desktop with coming-soon status', () => {
-      const agents = listAllAgents();
-      const claudeDesktop = agents.find((a) => a.id === 'claude-desktop');
-      expect(claudeDesktop).toBeDefined();
-      expect(claudeDesktop?.status).toBe('coming-soon');
     });
   });
 
@@ -90,13 +83,6 @@ describe('Catalog Index', () => {
     it('returns undefined for unknown id', () => {
       expect(getAgentById('nonexistent')).toBeUndefined();
     });
-
-    it('returns Claude Desktop with promotion checklist', () => {
-      const agent = getAgentById('claude-desktop');
-      expect(agent?.status).toBe('coming-soon');
-      expect(agent?.promotionChecklist).toBeDefined();
-      expect(agent?.promotionChecklist).toHaveLength(5);
-    });
   });
 
   describe('getProviderById', () => {
@@ -146,7 +132,7 @@ describe('Catalog Index', () => {
     });
 
     it('returns empty array for agent with no pairs', () => {
-      const pairs = getPairsForAgent('claude-desktop');
+      const pairs = getPairsForAgent('nonexistent');
       expect(pairs).toHaveLength(0);
     });
   });

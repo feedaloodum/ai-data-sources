@@ -36,6 +36,34 @@ export function EventModal({ source, onClose }: EventModalProps) {
               {source.description}
             </Text>
           </div>
+          {source.contains && source.contains.length > 0 && (
+            <div className="event-modal__section">
+              <Text as="div" variant="body-sm-semibold">
+                What the logs contain
+              </Text>
+              <ul className="event-modal__list">
+                {source.contains.map((item, i) => (
+                  <li key={i}>
+                    <Text variant="body-sm-normal" color="subtle">{item}</Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {source.useCases && source.useCases.length > 0 && (
+            <div className="event-modal__section">
+              <Text as="div" variant="body-sm-semibold">
+                Questions this data answers
+              </Text>
+              <ul className="event-modal__list">
+                {source.useCases.map((item, i) => (
+                  <li key={i}>
+                    <Text variant="body-sm-normal" color="subtle">{item}</Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {tabs.length > 1 && (
             <div className="event-modal__tabs" role="tablist">
               {tabs.map((tab, idx) => (

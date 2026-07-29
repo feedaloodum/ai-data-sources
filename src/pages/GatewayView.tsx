@@ -7,6 +7,7 @@ import { buildGatewayConfig, buildSourcesMap } from '../components/diagramBuilde
 import { ArchitectureDiagram } from '../components/ArchitectureDiagram';
 import { SourceCard } from '../components/SourceCard';
 import { TieringTable } from '../components/TieringTable';
+import { EntityHeading } from '../components/entityLogos';
 
 const pageStyle: CSSProperties = {
   padding: `${token('spacing.xl')} ${token('spacing.lg')}`,
@@ -67,7 +68,7 @@ export default function GatewayView() {
   return (
     <div style={pageStyle}>
       <section style={sectionStyle}>
-        <Text as="h1" variant="heading-xl">{gateway.name}</Text>
+        <EntityHeading id={gateway.id} kind="gateway" title={gateway.name} />
         <Text color="subtle">{gateway.description}</Text>
       </section>
 

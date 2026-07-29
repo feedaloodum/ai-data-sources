@@ -7,6 +7,7 @@ import { buildAgentConfig, buildSourcesMap } from '../components/diagramBuilders
 import { ArchitectureDiagram } from '../components/ArchitectureDiagram';
 import { SourceCard } from '../components/SourceCard';
 import { TieringTable } from '../components/TieringTable';
+import { EntityHeading } from '../components/entityLogos';
 
 const pageStyle: CSSProperties = {
   padding: `${token('spacing.xl')} ${token('spacing.lg')}`,
@@ -95,7 +96,7 @@ export default function AgentView() {
       <div style={pageStyle}>
         <section style={sectionStyle}>
           <div style={headerRowStyle}>
-            <Text as="h1" variant="heading-xl">{agent.name}</Text>
+            <EntityHeading id={agent.id} kind="agent" title={agent.name} />
             <div style={comingSoonBadgeStyle}>
               <Pill appearance="info" variant="muted">Coming Soon</Pill>
             </div>
@@ -135,7 +136,7 @@ export default function AgentView() {
   return (
     <div style={pageStyle}>
       <section style={sectionStyle}>
-        <Text as="h1" variant="heading-xl">{agent.name}</Text>
+        <EntityHeading id={agent.id} kind="agent" title={agent.name} />
         <Text color="subtle">{agent.description}</Text>
       </section>
 

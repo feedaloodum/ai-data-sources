@@ -6,7 +6,12 @@ import type {
   ComputedEdge,
   ComputedLayer,
   EdgeType,
+  ViewBox,
 } from './diagramTypes';
+
+// Padding around the tightest content bounds so strokes, arrowheads, and
+// edge labels are not clipped at the viewBox border.
+const VIEWBOX_PADDING = 24;
 
 // ── Path Computation ────────────────────────────────────────────────────────
 
@@ -76,8 +81,107 @@ export function computeLayout(config: DiagramConfig): ComputedLayout {
     };
   });
 
-  // Layers pass through
-  const layers: ComputedLayer[] = config.layers.map((l) => ({ ...l }));
+  const layers = computeLayers(config.layers, config.nodes);
 
-  return { nodes, edges, layers };
+  const viewBox = computeViewBox(config, layers, nodeMap);
+
+  return { nodes, edges, layers, viewBox };
+}
+
+// ── Layer Computation ────────────────────────────────────────────────────────
+
+// Padding between a band's edge and the nodes it frames.
+const LAYER_PADDING_X = 20;
+const LAYER_PADDING_TOP = 28; // extra room for the band label
+const LAYER_PADDING_BOTTOM = 16;
+
+/**
+ * Resolve each layer's rect. If explicit geometry is provided it passes
+ * through; otherwise the band is sized to enclose every node whose `layerId`
+ * matches, so tall/variable content (e.g. long source columns) never spills
+ * past its band into a neighbor.
+ */
+function computeLayers(layers: DiagramConfig['layers'], nodes: DiagramNode[]): ComputedLayer[] {
+  return layers.map((l) => {
+    if (l.x != null && l.y != null && l.width != null && l.height != null) {
+      return { ...l, x: l.x, y: l.y, width: l.width, height: l.height };
+    }
+
+    const members = nodes.filter((n) => n.layerId === l.id);
+    if (members.length === 0) {
+      return { ...l, x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const n of members) {
+      minX = Math.min(minX, n.x - n.width / 2);
+      minY = Math.min(minY, n.y - n.height / 2);
+      maxX = Math.max(maxX, n.x + n.width / 2);
+      maxY = Math.max(maxY, n.y + n.height / 2);
+    }
+
+    return {
+      ...l,
+      x: minX - LAYER_PADDING_X,
+      y: minY - LAYER_PADDING_TOP,
+      width: maxX - minX + LAYER_PADDING_X * 2,
+      height: maxY - minY + LAYER_PADDING_TOP + LAYER_PADDING_BOTTOM,
+    };
+  });
+}
+
+// ── ViewBox Computation ──────────────────────────────────────────────────────
+
+/**
+ * Compute the tightest bounding box around all content, then pad it. Nodes are
+ * centered on (x, y); layers are top-left anchored. `return` edges bow 80px
+ * above the higher of their two endpoints, so those peaks extend the box too.
+ */
+function computeViewBox(
+  config: DiagramConfig,
+  layers: ComputedLayer[],
+  nodeMap: Map<string, DiagramNode>,
+): ViewBox {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const n of config.nodes) {
+    minX = Math.min(minX, n.x - n.width / 2);
+    minY = Math.min(minY, n.y - n.height / 2);
+    maxX = Math.max(maxX, n.x + n.width / 2);
+    maxY = Math.max(maxY, n.y + n.height / 2);
+  }
+
+  for (const l of layers) {
+    minX = Math.min(minX, l.x);
+    minY = Math.min(minY, l.y);
+    maxX = Math.max(maxX, l.x + l.width);
+    maxY = Math.max(maxY, l.y + l.height);
+  }
+
+  // `return` edges bow 80px above the higher endpoint (see computePath).
+  for (const e of config.edges) {
+    if (e.type !== 'return') continue;
+    const from = nodeMap.get(e.from);
+    const to = nodeMap.get(e.to);
+    if (!from || !to) continue;
+    minY = Math.min(minY, from.y - from.height / 2, to.y - to.height / 2, Math.min(from.y, to.y) - 80);
+  }
+
+  // Empty diagram fallback.
+  if (!Number.isFinite(minX)) {
+    return { x: 0, y: 0, width: 100, height: 100 };
+  }
+
+  return {
+    x: minX - VIEWBOX_PADDING,
+    y: minY - VIEWBOX_PADDING,
+    width: maxX - minX + VIEWBOX_PADDING * 2,
+    height: maxY - minY + VIEWBOX_PADDING * 2,
+  };
 }

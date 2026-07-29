@@ -3,6 +3,13 @@
   padding: 0;
 }
 
+/* App surface follows the active Capra theme (light or `.dark`). */
+body {
+  background-color: token('color.background.application');
+  color: token('color.foreground.default');
+  min-height: 100vh;
+}
+
 .landing-page {
   display: flex;
   flex-direction: column;

@@ -9,6 +9,19 @@ const bedrockInvocationLogs: Source = {
     'AWS Bedrock auto-emits invocation logs to S3 when invocation logging is enabled. Contains full request/response payloads, token counts, latency, and guardrail events. Queried in place via Cribl Federated Search — no ETL.',
   collectionMethod: 'stream-s3',
   criblProduct: 'Cribl Stream',
+  contains: [
+    'Full request and response payloads (prompt messages, system prompt, model output)',
+    'Token counts — input, output — and inference config (maxTokens, temperature)',
+    'Invocation metrics: total latency, first-byte latency',
+    'Model id, operation (Converse/ConverseStream/InvokeModel), request id, region',
+    'Guardrail interventions with the blocked content policy and confidence',
+  ],
+  useCases: [
+    'What did a model actually receive and return for a given request?',
+    'Which models are burning the most tokens, and how much latency do they add?',
+    'When did a guardrail block a request, and for what policy violation?',
+    'Can I reconstruct a full prompt/response trail for a compliance audit?',
+  ],
   exampleEventTabs: [
     {
       label: 'Raw Invocation Log',
@@ -120,6 +133,18 @@ const bedrockCloudWatch: Source = {
     'AWS CloudWatch metrics emitted by Bedrock: invocation count, latency percentiles, token counts, and error rates. Collected via CloudWatch Metric Stream → S3 → Cribl Stream.',
   collectionMethod: 'stream-s3',
   criblProduct: 'Cribl Stream',
+  contains: [
+    'Invocation counts: Invocations, InvocationClientErrors, InvocationServerErrors, ThrottledCount',
+    'Token metrics: InputTokenCount, OutputTokenCount',
+    'Latency metrics: InvocationLatency, FirstByteLatency',
+    'Per-model dimension (ModelId) at 1-minute resolution',
+  ],
+  useCases: [
+    'How many requests per minute is each model serving?',
+    'Are we seeing client errors, server errors, or throttling on a model?',
+    'How is latency trending per model over time?',
+    'Which models are approaching their throughput limits?',
+  ],
   exampleEventTabs: [
     {
       label: 'CloudWatch Metric Datapoint',
@@ -157,6 +182,18 @@ const bedrockCloudTrail: Source = {
     'AWS CloudTrail events for Bedrock API calls. Tracks who called which model, when, and from where. Key for compliance, cost attribution, and security auditing. Developer identity from STS session name after the final / in the ARN.',
   collectionMethod: 'stream-s3',
   criblProduct: 'Cribl Stream',
+  contains: [
+    'Event name (InvokeModel, Converse, etc.) and event time',
+    'Caller identity — IAM/STS ARN, assumed role, and session name (developer attribution)',
+    'Source IP address of the API call',
+    'Request parameters (modelId, contentType) and response status code',
+  ],
+  useCases: [
+    'Who invoked which model, and from what IP address?',
+    'Which developer or role is responsible for a given call (cost attribution)?',
+    'Is there unexpected or unauthorized Bedrock access?',
+    'Can I produce a who-did-what audit trail for compliance?',
+  ],
   exampleEventTabs: [
     {
       label: 'CloudTrail Event',
@@ -212,6 +249,18 @@ const anthropicAdminApi: Source = {
     'Anthropic Admin API for org-wide usage monitoring. Endpoints: usage_report/messages, usage_report/claude_code, cost_report, and 11 analytics endpoints (token usage over time, per-user cost, skills, connectors, plugins, artifacts, chat projects).',
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
+  contains: [
+    'Token usage per model — input, output, and cache-read tokens',
+    'Cost in USD, aggregated by day and by user',
+    'Per-user attribution: user id and email',
+    'Analytics across skills, connectors, plugins, artifacts, and chat projects',
+  ],
+  useCases: [
+    'What is our org spending on Claude, broken down by model?',
+    'Which users are driving the most token usage and cost?',
+    'How much are cache reads saving us?',
+    'How is adoption trending across teams and features over time?',
+  ],
   exampleEventTabs: [
     {
       label: 'Usage Report Response',
@@ -268,6 +317,18 @@ const anthropicComplianceApi: Source = {
     'Anthropic Compliance API — 400+ activity types, paginated (cursor-based, default 100, max 5000). Filterable by type/actor/org/time/order. Content access: chats, messages, files, projects, artifacts, Claude Code artifacts.',
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
+  contains: [
+    '400+ activity types (e.g. message.sent) with actor, organization id, and timestamp',
+    'Actor details — user type and id',
+    'Per-event details: conversation id, model, and other context',
+    'Content access to chats, messages, files, projects, and artifacts',
+  ],
+  useCases: [
+    'What activity occurred in the org, by whom, and when?',
+    'Can I reconstruct a specific user\'s conversation and content history?',
+    'How frequently do specific audit event types occur?',
+    'Can I satisfy an eDiscovery or compliance-audit request with full detail?',
+  ],
   exampleEventTabs: [
     {
       label: 'Compliance Activity Event',
@@ -315,6 +376,18 @@ const openaiAdminApi: Source = {
     'OpenAI Admin API: audit_logs (140+ event types: api_key.*, project.*, role.*, user.*, invite.*, etc.), usage (11 endpoints — completions, audio, embeddings, images, etc.), costs. Full CRUD for keys, users, projects, spend limits.',
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
+  contains: [
+    '140+ audit event types: api_key.*, project.*, role.*, user.*, invite.*',
+    'Actor identity (user email and id), project id, and affected resource',
+    'Usage per model across 11 endpoints — completions, audio, embeddings, images',
+    'Cost in USD per time window',
+  ],
+  useCases: [
+    'Who created, rotated, or deleted API keys and when?',
+    'What is our spend and token usage per model and project?',
+    'What admin changes happened to users, roles, and projects?',
+    'Can I produce a full audit trail for the org?',
+  ],
   exampleEventTabs: [
     {
       label: 'Audit Log Event',
@@ -377,6 +450,18 @@ const openaiComplianceLogs: Source = {
     'ChatGPT Enterprise Compliance Logs Platform — immutable, time-windowed JSONL log files for SIEM streaming and eDiscovery. Separate from Platform API admin.',
   collectionMethod: 'stream-s3',
   criblProduct: 'Cribl Stream',
+  contains: [
+    'Conversation/message events with type, timestamp, and model',
+    'Workspace id, user id, and conversation id',
+    'Content preview of the message',
+    'Immutable, time-windowed JSONL records for SIEM and eDiscovery',
+  ],
+  useCases: [
+    'Which ChatGPT Enterprise conversations happened, and by whom?',
+    'Can I stream immutable conversation records to my SIEM?',
+    'Can I satisfy an eDiscovery request against ChatGPT usage?',
+    'What was discussed in a specific workspace or conversation?',
+  ],
   exampleEventTabs: [
     {
       label: 'Compliance Log Entry',
@@ -415,6 +500,19 @@ const azureDiagnosticLogs: Source = {
     'Azure AI Foundry diagnostic settings: 5 log categories — Audit Logs, Azure OpenAI Request Usage, Managed Network Events, Request and Response Logs, Trace Logs. All flow to AzureDiagnostics Log Analytics table.',
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
+  contains: [
+    '5 log categories, all in the AzureDiagnostics table (one collection path):',
+    '• Audit Logs — operation name, caller IP, correlation id',
+    '• Azure OpenAI Request Usage — token and request counts',
+    '• Request and Response Logs — model deployment/name/version, status code, stream type, service tier',
+    '• Managed Network Events and Trace Logs',
+  ],
+  useCases: [
+    'Which model deployments are being called, and with what status codes?',
+    'Is a deployment running on provisioned or pay-as-you-go (service tier)?',
+    'Who called the service, from what IP, for an audit trail?',
+    'How do request patterns and model versions differ across deployments?',
+  ],
   exampleEventTabs: [
     {
       label: 'Request and Response Log',
@@ -472,6 +570,20 @@ const azureMetrics: Source = {
     'Azure AI Foundry platform metrics: HTTP Requests (availability, request count), Latency (Time to Response, Time Between Tokens, TTFT, Tokens/sec), Usage (prompt/completion/active/inference tokens, PTU utilization, cache match rate), and legacy Cognitive Services metrics.',
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
+  contains: [
+    '4 metric categories, all via one metrics poll:',
+    '• HTTP Requests — availability, request count',
+    '• Latency — Time to Response, Time Between Tokens, TTFT, Tokens/sec',
+    '• Usage — prompt/completion/active/inference tokens, PTU utilization, cache match rate',
+    '• Legacy Cognitive Services metrics',
+    'Per-deployment dimensions: ModelDeploymentName, ModelName, ModelVersion, ServiceTier',
+  ],
+  useCases: [
+    'What is token consumption and PTU utilization per deployment?',
+    'How is latency (TTFT, tokens/sec) trending per model?',
+    'How effective is prompt caching (cache match rate)?',
+    'Is the service meeting availability targets?',
+  ],
   exampleEventTabs: [
     {
       label: 'Usage Metric',
@@ -521,6 +633,20 @@ const vertexAuditLogs: Source = {
     'GCP Vertex AI audit logs: Admin Activity (always on), Data Access (must enable — includes endpoints.predict, endpoints.rawPredict, endpoints.explain), System Event (always on), Policy Denied (default on).',
   collectionMethod: 'stream-s3',
   criblProduct: 'Cribl Stream',
+  contains: [
+    '4 Cloud Audit Log types, all under cloudaudit.googleapis.com (one export sink):',
+    '• Admin Activity — config/resource changes (always on)',
+    '• Data Access — endpoints.predict, rawPredict, explain (must be enabled)',
+    '• System Event — GCP-initiated actions (always on)',
+    '• Policy Denied — access blocked by policy (on by default)',
+    'Per-event: methodName, resourceName, principalEmail, timestamp',
+  ],
+  useCases: [
+    'Who invoked prediction endpoints, and against which model?',
+    'What admin/config changes were made to Vertex resources?',
+    'When was access denied by an org policy?',
+    'Can I build a full who-did-what audit trail for compliance?',
+  ],
   exampleEventTabs: [
     {
       label: 'Data Access Log (endpoints.predict)',
@@ -565,6 +691,18 @@ const vertexMonitoring: Source = {
     'GCP Cloud Monitoring for Vertex AI: endpoint performance (predictions/sec, error %, model/overhead/total latency), resource usage (replica count, CPU, memory, accelerator duty cycle), feature store metrics, training metrics.',
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
+  contains: [
+    'Endpoint performance — predictions/sec, error %, model/overhead/total latency',
+    'Resource usage — replica count, CPU, memory, accelerator duty cycle',
+    'Feature store and training metrics',
+    'Per-metric dimensions: model and endpoint',
+  ],
+  useCases: [
+    'How many predictions per second is each model/endpoint serving?',
+    'What is the error rate and latency per model?',
+    'Are endpoints over- or under-provisioned (replica/CPU/accelerator usage)?',
+    'How is model performance trending over time?',
+  ],
   exampleEventTabs: [
     {
       label: 'Endpoint Metric',

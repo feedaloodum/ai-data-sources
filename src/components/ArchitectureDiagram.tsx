@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { computeLayout } from './diagramLayout';
 import type { DiagramConfig, ComputedNode } from './diagramTypes';
 import { EventModal } from './EventModal';
+import { NodeIcon } from './NodeIcon';
+import { getEntityLogo, type EntityKind } from './entityLogos';
 import type { Source } from '../types';
 import { token } from '@capra/theme';
 
@@ -51,14 +53,14 @@ export function ArchitectureDiagram({ config, sources = {} }: ArchitectureDiagra
     }
   };
 
-  const viewBoxW = 900;
-  const viewBoxH = 680;
+  const { viewBox } = layout;
 
   return (
     <>
       <div style={{ width: '100%', overflowX: 'auto' }}>
         <svg
-          viewBox={`0 0 ${viewBoxW} ${viewBoxH}`}
+          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+          preserveAspectRatio="xMidYMid meet"
           style={{ width: '100%', minWidth: 700, display: 'block' }}
         >
           <defs>
@@ -125,6 +127,9 @@ export function ArchitectureDiagram({ config, sources = {} }: ArchitectureDiagra
             const borderToken = NODE_BORDER_TOKEN[node.type] ?? 'color.border.neutral.default';
             const bgToken = NODE_BG_COLOR[node.type] ?? 'color.background.neutral.subtle';
             const isGeneric = node.type === 'generic';
+            const isBranded = node.type === 'agent' || node.type === 'provider' || node.type === 'gateway';
+            const BrandLogo = isBranded && node.brandId ? getEntityLogo(node.brandId, node.type as EntityKind) : null;
+            const hasLeadingMark = Boolean(node.icon || BrandLogo);
             return (
               <g
                 key={node.id}
@@ -136,28 +141,64 @@ export function ArchitectureDiagram({ config, sources = {} }: ArchitectureDiagra
                   y={node.y - node.height / 2}
                   width={node.width}
                   height={node.height}
-                  rx={6}
+                  rx={8}
                   fill={token(bgToken)}
                   stroke={token(borderToken)}
                   strokeWidth={isGeneric ? 1 : 1.5}
                   strokeDasharray={isGeneric ? '4,4' : undefined}
                   opacity={isGeneric ? 0.6 : 1}
                 />
-                <text
-                  x={node.x}
-                  y={node.y - 4}
-                  textAnchor="middle"
-                  fontSize={11}
-                  fontWeight={600}
-                  fill={token('color.foreground.default')}
+                <foreignObject
+                  x={node.x - node.width / 2}
+                  y={node.y - node.height / 2}
+                  width={node.width}
+                  height={node.height}
+                  style={{ pointerEvents: 'none' }}
                 >
-                  {node.label}
-                </text>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: hasLeadingMark ? 'flex-start' : 'center',
+                      gap: 8,
+                      padding: '4px 8px',
+                      boxSizing: 'border-box',
+                      textAlign: hasLeadingMark ? 'left' : 'center',
+                    }}
+                  >
+                    {node.icon && (
+                      <span style={{ display: 'inline-flex', flexShrink: 0, fontSize: 18 }}>
+                        <NodeIcon icon={node.icon} />
+                      </span>
+                    )}
+                    {BrandLogo && (
+                      <span style={{ display: 'inline-flex', flexShrink: 0, fontSize: 20 }}>
+                        <BrandLogo size="md" />
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        color: token('color.foreground.default'),
+                      }}
+                    >
+                      {node.label}
+                    </span>
+                  </div>
+                </foreignObject>
                 {node.clickable && (
                   <text
-                    x={node.x + node.width / 2 - 8}
-                    y={node.y - node.height / 2 + 10}
-                    fontSize={7}
+                    x={node.x + node.width / 2 - 10}
+                    y={node.y - node.height / 2 + 13}
+                    fontSize={9}
                     fill={token('color.foreground.subtle')}
                   >
                     🔍

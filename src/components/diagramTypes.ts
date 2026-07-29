@@ -14,6 +14,14 @@ export type DiagramNodeType =
 
 export type EdgeType = 'data-flow' | 'api-call' | 'audit' | 'return';
 
+export type NodeIcon =
+  | 'edge'
+  | 'stream'
+  | 'lakehouse'
+  | 'metrics'
+  | 'lake'
+  | 'archive';
+
 export interface DiagramNode {
   id: string;
   label: string;
@@ -23,6 +31,12 @@ export interface DiagramNode {
   height: number;
   type: DiagramNodeType;
   clickable: boolean;
+  /** Optional Cribl product / destination icon rendered inside the node. */
+  icon?: NodeIcon;
+  /** Entity id (agent/provider/gateway) for looking up its brand logo. */
+  brandId?: string;
+  /** Band this node belongs to; drives computed layer geometry. */
+  layerId?: string;
 }
 
 export interface DiagramEdge {
@@ -36,11 +50,16 @@ export interface DiagramEdge {
 export interface DiagramLayer {
   id: string;
   label: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
   colorToken?: string;
+  /**
+   * Explicit geometry is optional. When omitted, computeLayout derives the
+   * band's rect from the bounds of all nodes whose `layerId` matches this id,
+   * so bands always frame their content instead of relying on fixed heights.
+   */
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface DiagramConfig {
@@ -65,10 +84,26 @@ export interface ComputedEdge {
   path: string; // SVG path string
 }
 
-export interface ComputedLayer extends DiagramLayer {}
+export interface ComputedLayer {
+  id: string;
+  label: string;
+  colorToken?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface ViewBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export interface ComputedLayout {
   nodes: ComputedNode[];
   edges: ComputedEdge[];
   layers: ComputedLayer[];
+  viewBox: ViewBox;
 }

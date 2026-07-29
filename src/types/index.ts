@@ -40,6 +40,10 @@ export interface Source {
   description: string;
   collectionMethod: CollectionMethod;
   criblProduct: 'Cribl Edge' | 'Cribl Stream';
+  /** What the logs contain — key fields, record types, and data captured. */
+  contains?: string[];
+  /** Use cases — questions this data answers. */
+  useCases?: string[];
   exampleEventTabs: ExampleEventTab[];
   tieringSuggestions: TieringSuggestion[];
   limitation?: string;

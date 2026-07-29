@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Card, Text, Pill } from '@capra/core';
 import { token } from '@capra/theme';
 import type { CSSProperties } from 'react';
@@ -12,6 +12,8 @@ import {
   getProviderById,
 } from '../data/catalog';
 import type { Agent, Provider, Gateway, Pair } from '../types';
+import { getEntityLogo, type EntityKind } from '../components/entityLogos';
+import { CollectionComparison } from '../components/CollectionComparison';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 // Inline styles using design tokens. Capra components discourage className overrides,
@@ -59,17 +61,53 @@ const cardHeaderRowStyle: CSSProperties = {
   gap: token('spacing.sm'),
 };
 
+const titleWithLogoStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: token('spacing.sm'),
+};
+
+const logoBadgeStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: token('spacing.xs'),
+  fontSize: '1.25rem',
+  flexShrink: 0,
+};
+
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function LogoTitle({ id, kind, title }: { id: string; kind: EntityKind; title: string }) {
+  const Logo = getEntityLogo(id, kind);
+  return (
+    <div style={titleWithLogoStyle}>
+      <span style={logoBadgeStyle} aria-hidden>
+        <Logo size="md" />
+      </span>
+      <Card.Title>{title}</Card.Title>
+    </div>
+  );
+}
 
 function PairCard({ pair }: { pair: Pair }) {
   const agent = getAgentById(pair.agentId);
   const provider = getProviderById(pair.providerId);
   const title = `${agent?.name ?? pair.agentId} + ${provider?.name ?? pair.providerId}`;
+  const AgentLogo = getEntityLogo(pair.agentId, 'agent');
+  const ProviderLogo = getEntityLogo(pair.providerId, 'provider');
   return (
     <Link to={`/pair/${pair.id}`} style={{ textDecoration: 'none', color: 'inherit', height: '100%' }}>
       <Card>
         <Card.Header>
-          <Card.Title>{title}</Card.Title>
+          <div style={titleWithLogoStyle}>
+            <span style={logoBadgeStyle} aria-hidden>
+              <AgentLogo size="md" />
+              <Text as="span" color="subtle">+</Text>
+              <ProviderLogo size="md" />
+            </span>
+            <Card.Title>{title}</Card.Title>
+          </div>
         </Card.Header>
         <Card.Content>
           <Text color="subtle">Agent + Provider pair with combined tiering tips.</Text>
@@ -87,7 +125,7 @@ function AgentCard({ agent }: { agent: Agent }) {
     <Card>
       <Card.Header>
         <div style={cardHeaderRowStyle}>
-          <Card.Title>{agent.name}</Card.Title>
+          <LogoTitle id={agent.id} kind="agent" title={agent.name} />
           {isComingSoon && (
             <div style={comingSoonBadgeStyle}>
               <Pill appearance="info" variant="muted">Coming Soon</Pill>
@@ -151,7 +189,7 @@ function ProviderCard({ provider }: { provider: Provider }) {
     <Link to={`/provider/${provider.id}`} style={{ textDecoration: 'none', color: 'inherit', height: '100%' }}>
       <Card>
         <Card.Header>
-          <Card.Title>{provider.name}</Card.Title>
+          <LogoTitle id={provider.id} kind="provider" title={provider.name} />
         </Card.Header>
         <Card.Content>
           <div style={cardBodyStyle}>
@@ -170,7 +208,7 @@ function GatewayCard({ gateway }: { gateway: Gateway }) {
     <Link to={`/gateway/${gateway.id}`} style={{ textDecoration: 'none', color: 'inherit', height: '100%' }}>
       <Card>
         <Card.Header>
-          <Card.Title>{gateway.name}</Card.Title>
+          <LogoTitle id={gateway.id} kind="gateway" title={gateway.name} />
         </Card.Header>
         <Card.Content>
           <div style={cardBodyStyle}>
@@ -186,9 +224,9 @@ function GatewayCard({ gateway }: { gateway: Gateway }) {
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section style={sectionStyle}>
+    <section id={id} style={{ ...sectionStyle, scrollMarginTop: token('spacing.2xl') }}>
       <div style={sectionHeadingStyle}>
         <Text as="h2" variant="heading-md">{title}</Text>
       </div>
@@ -200,6 +238,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ── LandingPage ──────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const { hash } = useLocation();
+
+  // react-router doesn't scroll to hash targets on its own; do it when the
+  // hash changes (e.g. navigating from another page via the top nav).
+  useEffect(() => {
+    if (!hash) return;
+    const el = document.getElementById(hash.slice(1));
+    el?.scrollIntoView({ behavior: 'smooth' });
+  }, [hash]);
+
   const pairs = listAllPairs();
   const agents = listAllAgents();
   const providers = listAllProviders();
@@ -212,25 +260,32 @@ export default function LandingPage() {
         <Text color="subtle">Reference catalog of observability data sources for AI agents, providers, and gateways.</Text>
       </div>
 
-      <Section title="Agent + Provider Pairs">
+      <section id="collection" style={{ ...sectionStyle, scrollMarginTop: token('spacing.2xl') }}>
+        <div style={sectionHeadingStyle}>
+          <Text as="h2" variant="heading-md">Agent vs. Provider Collection</Text>
+        </div>
+        <CollectionComparison />
+      </section>
+
+      <Section id="pairs" title="Agent + Provider Pairs">
         {pairs.map((pair) => (
           <PairCard key={pair.id} pair={pair} />
         ))}
       </Section>
 
-      <Section title="Agents">
+      <Section id="agents" title="Agents">
         {agents.map((agent) => (
           <AgentCard key={agent.id} agent={agent} />
         ))}
       </Section>
 
-      <Section title="Providers">
+      <Section id="providers" title="Providers">
         {providers.map((provider) => (
           <ProviderCard key={provider.id} provider={provider} />
         ))}
       </Section>
 
-      <Section title="Gateways">
+      <Section id="gateways" title="Gateways">
         {gateways.map((gateway) => (
           <GatewayCard key={gateway.id} gateway={gateway} />
         ))}

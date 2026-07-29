@@ -9,6 +9,19 @@ const claudeCodeJsonl: Source = {
     'Session-level JSONL files written by Claude Code CLI to ~/.claude/projects/*/sessions/*.jsonl. Contains full conversation data including prompts, completions, tool calls, and token counts.',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'Full conversation — user prompts and assistant completions',
+    'Per-turn token usage: input, output, cache-creation, cache-read',
+    'Cost in USD, model id, session id, and timestamps',
+    'Tool-use and tool-result events with names and arguments',
+    'Stop reasons (e.g. tool_use, end_turn)',
+  ],
+  useCases: [
+    'What did a developer ask, and how did Claude Code respond?',
+    'How many tokens and how much cost did a session consume?',
+    'Which tools were invoked during a session, and with what inputs?',
+    'Can I reconstruct a full session for review or audit?',
+  ],
   exampleEventTabs: [
     {
       label: 'Raw JSONL (assistant turn)',
@@ -101,6 +114,18 @@ const claudeCodeOtel: Source = {
     'Alternative collection using Cribl Edge OTel receiver. Receives OpenTelemetry traces, metrics, and logs from Claude Code agents instrumented with the OTel exporter.',
   collectionMethod: 'edge-otel-receiver',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'OTel spans with trace/span ids and durations (start/end time)',
+    'gen_ai.* attributes — system, request model, token usage, finish reasons',
+    'Cost, stop reason, and session id',
+    'Resource attributes: service.name, host.name, os.user, project',
+  ],
+  useCases: [
+    'What is the token and cost profile per span/turn from live telemetry?',
+    'Which developer (os.user/host) and project generated the activity?',
+    'How long did each model call and tool use take?',
+    'Can I trace agent behavior without tailing local files?',
+  ],
   exampleEventTabs: [
     {
       label: 'OTel Span (Enriched)',
@@ -153,6 +178,18 @@ const claudeCodeToolCalls: Source = {
     'File reads/writes, shell commands, code execution, git operations. Part of JSONL session data (tool_use and tool_result events).',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'Tool name (Bash, Read, Write, Edit, etc.) and invocation arguments',
+    'Tool result output',
+    'Session id and timestamps for each call',
+    'Shell commands, file paths, and code-execution details',
+  ],
+  useCases: [
+    'What commands and file operations did the agent run?',
+    'Which tools are used most often, and how?',
+    'Did the agent execute anything risky or unexpected?',
+    'Can I audit every tool call with its arguments and output?',
+  ],
   exampleEventTabs: [
     {
       label: 'tool_use event',
@@ -203,6 +240,18 @@ const claudeCodeMcpCalls: Source = {
     'Requests to Model Context Protocol servers — filesystem, database, API tools, custom MCP servers. Part of JSONL session data.',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'MCP tool name (mcp__<server>__<tool>) identifying server and operation',
+    'Call arguments and results',
+    'Session id and timestamps',
+    'Interactions with filesystem, database, API, and custom MCP servers',
+  ],
+  useCases: [
+    'Which MCP servers is the agent talking to, and how often?',
+    'What data did the agent access through MCP tools?',
+    'Are any custom or unexpected MCP servers in use?',
+    'Can I audit every MCP call with its arguments?',
+  ],
   exampleEventTabs: [
     {
       label: 'MCP tool call',
@@ -244,6 +293,18 @@ const codexRollouts: Source = {
     'Session rollout files written by Codex CLI to ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl. RolloutItem format: session_meta, response_item, event_msg, turn_context, world_state. Compressed rollouts use .jsonl.zst.',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'session_meta — session id, timestamp, cwd, cli version, model provider',
+    'response_item — assistant messages and output text',
+    'event_msg — tool calls with tool name, input, success, duration',
+    'turn_context and world_state per rollout item',
+  ],
+  useCases: [
+    'What was the full conversation and tool activity in a Codex session?',
+    'Which tools ran, did they succeed, and how long did they take?',
+    'What working directory and CLI version produced the session?',
+    'Can I reconstruct or audit a complete Codex rollout?',
+  ],
   exampleEventTabs: [
     {
       label: 'session_meta (first line)',
@@ -317,6 +378,18 @@ const codexSqliteState: Source = {
     'SQLite database at ~/.codex/state_5.sqlite. Threads table contains session metadata: tokens_used, git info, model_provider, cwd, title, sandbox_policy, approval_mode.',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'Per-thread session metadata: id, title, created/updated timestamps',
+    'Tokens used, model provider, and source',
+    'Git correlation: git_sha, git_branch, git_origin_url',
+    'Sandbox policy and approval mode; cwd and rollout path',
+  ],
+  useCases: [
+    'How many tokens did each Codex session consume?',
+    'Which git branch/commit was a session working against?',
+    'What sandbox and approval settings were in effect?',
+    'How many sessions ran, and from where?',
+  ],
   exampleEventTabs: [
     {
       label: 'Threads table row',
@@ -360,6 +433,18 @@ const codexOtel: Source = {
     'Native OTel support via the codex-otel crate. Configured in ~/.codex/config.toml [otel] section. OTLP HTTP/gRPC for logs, traces, and metrics. Includes gen_ai.usage.* attributes.',
   collectionMethod: 'edge-otel-receiver',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'OTel logs/traces/metrics events (e.g. codex.api_request)',
+    'Per-request attributes: model, attempt, status, duration',
+    'gen_ai.usage.* token attributes',
+    'Session source (cli, etc.)',
+  ],
+  useCases: [
+    'What is the success rate and latency of Codex API requests?',
+    'How many retries/attempts are happening per request?',
+    'What is token usage per request from live telemetry?',
+    'Can I monitor Codex without tailing local rollout files?',
+  ],
   exampleEventTabs: [
     {
       label: 'OTel Log Event (codex.api_request)',
@@ -432,6 +517,18 @@ const cursorHooks: Source = {
     'Cursor Hooks system — 20+ lifecycle events (beforeSubmitPrompt, afterAgentResponse, preToolUse, postToolUse, sessionStart, sessionEnd, subagentStart/Stop, etc.). Shell scripts forward structured JSON to any HTTP endpoint. Primary telemetry collection pathway.',
   collectionMethod: 'stream-http',
   criblProduct: 'Cribl Stream',
+  contains: [
+    '20+ lifecycle events (beforeSubmitPrompt, afterAgentResponse, pre/postToolUse, session start/end, subagent start/stop)',
+    'Prompt and response text, model, request id, trace id, timestamp',
+    'Per-response token usage (input/output)',
+    'Tool events with tool name, file path, and success',
+  ],
+  useCases: [
+    'What are developers prompting Cursor, and what does it return?',
+    'Which tools/files did the agent touch, and did they succeed?',
+    'What is token usage and model distribution across prompts?',
+    'Can I capture a full conversation audit from the primary telemetry path?',
+  ],
   exampleEventTabs: [
     {
       label: 'beforeSubmitPrompt event',
@@ -501,6 +598,18 @@ const cursorAnalyticsApi: Source = {
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
   requiresEnterprise: true,
+  contains: [
+    'Aggregate usage: agent edits, Tab acceptances, daily active users',
+    'Model usage breakdown by model',
+    'Conversation insights: avg turns, total conversations',
+    'MCP adoption: servers connected, tools available',
+  ],
+  useCases: [
+    'How much is the team using Cursor (edits, Tab, DAU)?',
+    'Which models are most used across the org?',
+    'How is MCP adoption trending?',
+    'How engaged are developers (conversation depth) over time?',
+  ],
   exampleEventTabs: [
     {
       label: 'Analytics response',
@@ -546,6 +655,17 @@ const cursorAiCodeTracking: Source = {
   collectionMethod: 'stream-api-poll',
   criblProduct: 'Cribl Stream',
   requiresEnterprise: true,
+  contains: [
+    'Per-commit AI attribution: commit SHA, AI-assisted lines, total lines',
+    'AI attribution percentage',
+    'Model used and timestamp',
+  ],
+  useCases: [
+    'What percentage of committed code was AI-assisted?',
+    'Which commits and models drove AI contributions?',
+    'How is AI code adoption trending over time?',
+    'Can I report AI attribution for engineering leadership?',
+  ],
   exampleEventTabs: [
     {
       label: 'AI attribution response',
@@ -582,6 +702,17 @@ const cursorAuditLogStreaming: Source = {
   collectionMethod: 'stream-s3',
   criblProduct: 'Cribl Stream',
   requiresEnterprise: true,
+  contains: [
+    'Audit events: event type, action, user id',
+    'Source IP address and timestamp',
+    'Administrative/access events (not AI prompt/response content)',
+  ],
+  useCases: [
+    'Who logged in and performed admin actions, and when?',
+    'From what IP addresses is the org accessing Cursor?',
+    'Can I stream Cursor audit events to my SIEM?',
+    'Can I retain a compliance audit trail (note: content lives in Hooks)?',
+  ],
   exampleEventTabs: [
     {
       label: 'Audit log event',
@@ -616,6 +747,17 @@ const cursorGlobalState: Source = {
     'SQLite database at ~/Library/Application Support/Cursor/User/globalStorage/state.vscdb. Contains chat history (aiService.prompts, workbench.panel.aichat.view.aichat.chatdata) and saved prompts.',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'Chat history — user and assistant turns (chatdata)',
+    'Saved prompts (aiService.prompts)',
+    'Key/value rows from the local ItemTable store',
+  ],
+  useCases: [
+    'What conversations happened locally, even without enterprise telemetry?',
+    'What saved prompts does a developer keep?',
+    'Can I recover chat history from a local machine?',
+    'Can I preserve conversation content for audit?',
+  ],
   exampleEventTabs: [
     {
       label: 'ItemTable query result',
@@ -642,6 +784,17 @@ const cursorWorkspaceStorage: Source = {
     'Per-workspace SQLite at ~/Library/Application Support/Cursor/User/workspaceStorage/<hash>/state.vscdb. Chat/composer history keyed by MD5 hash of project path.',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'Per-project chat and composer history',
+    'Workspace hash (MD5 of project path) and project path',
+    'Entry counts for chat and composer',
+  ],
+  useCases: [
+    'Which projects has a developer used Cursor on?',
+    'How much AI activity happened per project?',
+    'Can I attribute conversation history to a specific repo?',
+    'Can I recover per-workspace chat history locally?',
+  ],
   exampleEventTabs: [
     {
       label: 'Workspace state query',
@@ -671,6 +824,14 @@ const cursorInternalOtel: Source = {
   collectionMethod: 'edge-otel-receiver',
   criblProduct: 'Cribl Edge',
   limitation: 'Internal only — locked to Cursor backend. Use Hooks for user-collectible telemetry.',
+  contains: [
+    'Internal trace spans (e.g. agent_cli.turn.start) with request/trace ids',
+    'Locked to Cursor\'s backend — not redirectable to your own collector',
+  ],
+  useCases: [
+    'What internal spans exist (visible only in error logs)?',
+    'Why can\'t I collect this directly — and what should I use instead (Hooks)?',
+  ],
   exampleEventTabs: [
     {
       label: 'Internal OTel trace (from error logs)',
@@ -702,6 +863,18 @@ const chatgptCodexEngine: Source = {
     'ChatGPT Desktop uses the Codex agent system for coding features. Same ~/.codex/ paths, same rollout format, same [otel] config as Codex CLI. SessionMeta has source: "chatgpt".',
   collectionMethod: 'edge-file-tail',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'Codex rollout items with source: "chatgpt" in session_meta',
+    'Session id, cwd, cli version, model provider, timestamp',
+    'Assistant response items and event messages (tool calls)',
+    'Same ~/.codex/ format as Codex CLI',
+  ],
+  useCases: [
+    'What coding sessions came from ChatGPT Desktop vs. Codex CLI (source field)?',
+    'What did the assistant do during a ChatGPT Desktop coding session?',
+    'How much token usage comes from ChatGPT Desktop?',
+    'Can I audit ChatGPT Desktop coding activity?',
+  ],
   exampleEventTabs: [
     {
       label: 'Session metadata (source: chatgpt)',
@@ -759,6 +932,17 @@ const chatgptOtel: Source = {
     'Same OTel support as Codex CLI — via the codex-otel crate. Configured in ~/.codex/config.toml [otel] section. OTLP HTTP/gRPC for logs, traces, metrics.',
   collectionMethod: 'edge-otel-receiver',
   criblProduct: 'Cribl Edge',
+  contains: [
+    'OTel logs/traces/metrics (e.g. codex.conversation_starts) with source: chatgpt',
+    'Model, sandbox policy, approval mode',
+    'gen_ai.usage.* and codex.usage.* token attributes',
+  ],
+  useCases: [
+    'What is token usage for ChatGPT Desktop coding sessions from live telemetry?',
+    'What sandbox/approval settings were used?',
+    'Can I monitor ChatGPT Desktop without tailing local files?',
+    'How does ChatGPT Desktop activity compare to Codex CLI?',
+  ],
   exampleEventTabs: [
     {
       label: 'OTel Log (codex.conversation_starts)',
@@ -780,35 +964,6 @@ const chatgptOtel: Source = {
       tierId: 'metrics-store',
       fields: ['gen_ai.usage.input_tokens', 'gen_ai.usage.output_tokens', 'codex.usage.total_tokens'],
       reason: 'Monitor token usage from ChatGPT Desktop coding sessions',
-    },
-  ],
-};
-
-const chatgptLocalStorage: Source = {
-  id: 'chatgpt-local-storage',
-  name: 'Local Storage (Limited Documentation)',
-  description:
-    'Electron app storage at ~/Library/Application Support/ChatGPT/. Likely LevelDB/IndexedDB for conversation history. Exact schema not publicly documented.',
-  collectionMethod: 'edge-file-tail',
-  criblProduct: 'Cribl Edge',
-  limitation: 'Limited documentation — exact storage schema not publicly documented. Likely Electron-standard LevelDB/IndexedDB.',
-  exampleEventTabs: [
-    {
-      label: 'Expected storage path',
-      language: 'text',
-      content: `~/Library/Application Support/ChatGPT/
-├── Local Storage/     (LevelDB — likely conversation history)
-├── IndexedDB/         (structured data)
-├── Network/
-├── Preferences        (JSON — app settings)
-└── Cookies            (SQLite — session state)`,
-    },
-  ],
-  tieringSuggestions: [
-    {
-      tierId: 'cribl-lake',
-      fields: ['Local Storage data', 'IndexedDB data'],
-      reason: 'Prove local conversation history (format may need reverse engineering)',
     },
   ],
 };
@@ -854,21 +1009,6 @@ export const agents: Agent[] = [
     description:
       'OpenAI ChatGPT desktop app. Uses Codex engine for coding features — same ~/.codex/ infrastructure as Codex CLI. OTel via codex-otel crate.',
     status: 'v1',
-    sources: [chatgptCodexEngine, chatgptOtel, chatgptLocalStorage],
-  },
-  {
-    id: 'claude-desktop',
-    name: 'Claude Desktop',
-    description:
-      'Anthropic Electron GUI chat app. Local data sources and OTel support are under investigation.',
-    status: 'coming-soon',
-    sources: [],
-    promotionChecklist: [
-      'Local data research — determine storage format and paths (Electron app storage?)',
-      'OTel support — determine if native or shared with Claude Code',
-      'At least one confirmed collection pathway (Edge file tail, OTel receiver, or API poll)',
-      'Example events with schema documentation',
-      'Pair identification (likely Claude Desktop + Anthropic API)',
-    ],
+    sources: [chatgptCodexEngine, chatgptOtel],
   },
 ];

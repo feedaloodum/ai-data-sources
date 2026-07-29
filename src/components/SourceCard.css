@@ -44,6 +44,18 @@
   margin-bottom: token('spacing.md');
 }
 
+.event-modal__section {
+  margin-bottom: token('spacing.md');
+}
+
+.event-modal__list {
+  margin: token('spacing.xs') 0 0;
+  padding-left: token('spacing.lg');
+  display: flex;
+  flex-direction: column;
+  gap: token('spacing.xs');
+}
+
 .event-modal__tabs {
   display: flex;
   gap: token('spacing.xs');
